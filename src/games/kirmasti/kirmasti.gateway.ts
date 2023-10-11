@@ -1,7 +1,7 @@
 import { SubscribeMessage, WebSocketGateway } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 
-@WebSocketGateway()
+@WebSocketGateway(2001, { namespace: 'kirmasti' })
 export class KirmastiGateway {
   handleConnection(client: Socket) {
     console.log('user connected');
