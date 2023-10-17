@@ -8,11 +8,11 @@ export class KirmastiService {
   constructor(
     @InjectModel(Kirmasti.name) private kirmastiModel: Model<KirmastiDocument>,
   ) {}
-  async getRooms() {
+  async getRooms(username, page = 1, limit = 10, minBet, maxBet, maxPlayers) {
     return 'rooms';
   }
 
-  async createRoom() {
-    return 'created';
+  async createRoom(userId) {
+    const userRooms = await this.kirmastiModel.findOne({ })
   }
 }

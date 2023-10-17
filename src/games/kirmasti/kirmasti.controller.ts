@@ -1,5 +1,13 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  Request,
+  Body,
+} from '@nestjs/common';
 import { KirmastiService } from './kirmasti.service';
+import { AuthGuard } from 'src/schemas/auth.guard';
 
 @Controller('kirmasti')
 export class KirmastiController {
@@ -7,11 +15,13 @@ export class KirmastiController {
 
   @Get()
   async getRooms() {
-    return await this.kirmastiService.getRooms();
+    // return await this.kirmastiService.getRooms();
   }
 
+  @UseGuards(AuthGuard)
   @Post()
-  async createRoom() {
-    return await this.kirmastiService.createRoom();
+  async createRoom(@Request() req, @Body() body) {
+    const userId = req.user.userId;
+    return await this.kirmastiService.createRoom(userId);
   }
 }
