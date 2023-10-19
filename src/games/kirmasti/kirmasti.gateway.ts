@@ -24,7 +24,6 @@ export class KirmastiGateway {
     console.log('user has left');
   }
 
-
   // JOIN ROOM
   @SubscribeMessage('join-room')
   async joinRoom(@ConnectedSocket() socket, @MessageBody() body) {

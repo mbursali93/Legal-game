@@ -4,8 +4,9 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { verify } from 'jsonwebtoken';
+import { JwtPayload, verify } from 'jsonwebtoken';
 import { Request } from 'express';
+import { redis } from './redis';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -18,7 +19,18 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
     try {
-      const payload = await verify(token, process.env.JWT_SECRET);
+      const payload = (await verify(
+        token,
+        process.env.JWT_SECRET,
+      )) as JwtPayload;
+
+      const userId = payload.userId;
+      const currentUserToken = await redis.hget(
+        `userId:${userId}`,
+        'currentToken',
+      );
+
+      if (token !== currentUserToken) throw new UnauthorizedException();
       request['user'] = payload;
     } catch {
       throw new UnauthorizedException();
