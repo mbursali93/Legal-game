@@ -7,10 +7,12 @@ import {
 } from '@nestjs/websockets';
 import { Model } from 'mongoose';
 import { Socket } from 'socket.io';
+import { redis } from 'src/redis';
 import { Kirmasti } from 'src/schemas/kirmasti.schema';
 
 @WebSocketGateway(2001, { namespace: 'kirmasti' })
 export class KirmastiGateway {
+  private userSockets: Map<string, string> = new Map();
   constructor(
     @InjectModel(Kirmasti.name) private kirmastiModel: Model<Kirmasti>,
   ) {}
@@ -22,15 +24,14 @@ export class KirmastiGateway {
     console.log('user has left');
   }
 
-  @SubscribeMessage('message')
-  handleMessage(socket: Socket): string {
-    console.log(socket.id);
-    return 'Hello world!';
-  }
 
   // JOIN ROOM
   @SubscribeMessage('join-room')
   async joinRoom(@ConnectedSocket() socket, @MessageBody() body) {
+    // const test = await redis.hgetall('roomId:13423rsefsfdse3');
+    // console.log(test)
+    const roomId = body.roomId;
+
     const room = await this.kirmastiModel.findOne({ _id: body.roomId });
     if (!room) return;
     console.log('Received join-room event:', body);
@@ -43,7 +44,7 @@ export class KirmastiGateway {
   }
 
   @SubscribeMessage('accept-deal')
-  async acceptDeal() {}
+  async acceptDeal(@ConnectedSocket() Socket, @MessageBody() body) {}
 
   @SubscribeMessage('bet')
   async bet() {}

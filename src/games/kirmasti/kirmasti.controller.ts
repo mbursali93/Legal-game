@@ -7,7 +7,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { KirmastiService } from './kirmasti.service';
-import { AuthGuard } from 'src/schemas/auth.guard';
+import { AuthGuard } from 'src/auth.guard';
 
 @Controller('kirmasti')
 export class KirmastiController {
