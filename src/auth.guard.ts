@@ -5,19 +5,28 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtPayload, verify } from 'jsonwebtoken';
-import { Request } from 'express';
+import { Socket } from 'socket.io';
 import { redis } from './redis';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor() {}
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> {
+    const isHttpRequest = context.getType() === 'http';
+    if (isHttpRequest) {
+      return this.handleHttpRequest(context);
+    } else {
+      return this.handleWebSocketConnection(context);
+    }
+  }
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  private async handleHttpRequest(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
+
     if (!token) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Authorization header missing');
     }
+
     try {
       const payload = (await verify(
         token,
@@ -31,14 +40,39 @@ export class AuthGuard implements CanActivate {
       );
 
       if (token !== currentUserToken) throw new UnauthorizedException();
+
       request['user'] = payload;
-    } catch {
-      throw new UnauthorizedException();
+      return true;
+    } catch (error) {
+      throw new UnauthorizedException('Invalid token');
     }
-    return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
+  private async handleWebSocketConnection(
+    context: ExecutionContext,
+  ): Promise<boolean> {
+    const client: Socket = context.switchToWs().getClient<Socket>();
+    const authorizationHeader = client.handshake.headers.authorization;
+
+    if (!authorizationHeader) {
+      throw new UnauthorizedException('Authorization header missing');
+    }
+
+    try {
+      const payload = (await verify(
+        authorizationHeader,
+        process.env.JWT_SECRET,
+      )) as JwtPayload;
+
+      // context.switchToWs().getData().user = JSON.parse(payload);
+
+      return true;
+    } catch (error) {
+      throw new UnauthorizedException(error);
+    }
+  }
+
+  private extractTokenFromHeader(request: any): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }
