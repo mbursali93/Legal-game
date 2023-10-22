@@ -55,6 +55,7 @@ export class AuthGuard implements CanActivate {
     const authorizationHeader = client.handshake.headers.authorization;
 
     if (!authorizationHeader) {
+      return false;
       throw new UnauthorizedException('Authorization header missing');
     }
 
@@ -64,7 +65,7 @@ export class AuthGuard implements CanActivate {
         process.env.JWT_SECRET,
       )) as JwtPayload;
 
-      // context.switchToWs().getData().user = JSON.parse(payload);
+      context.switchToWs().getClient().user = payload.userId;
 
       return true;
     } catch (error) {

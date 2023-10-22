@@ -7,28 +7,37 @@ import {
 } from '@nestjs/websockets';
 import { Model } from 'mongoose';
 import { Socket } from 'socket.io';
+import { AuthGuard } from 'src/auth.guard';
 import { redis } from 'src/redis';
 import { Kirmasti } from 'src/schemas/kirmasti.schema';
+import { UseGuards } from '@nestjs/common';
+import { verify } from 'jsonwebtoken';
 
+@UseGuards(AuthGuard)
 @WebSocketGateway(2001, { namespace: 'kirmasti' })
 export class KirmastiGateway {
   private userSockets: Map<string, string> = new Map();
   constructor(
     @InjectModel(Kirmasti.name) private kirmastiModel: Model<Kirmasti>,
   ) {}
+
   handleConnection(client: Socket) {
-    console.log(`${client.id} connected`);
+    const token = client.request.headers.authorization;
+    const { userId } = verify(token, process.env.JWT_SECRET) as any;
+    const userConnected = this.userSockets.has(userId);
+    if (userConnected) return this.handleDisconnect(client);
+    this.userSockets.set(userId, client.id);
   }
 
   handleDisconnect(client: Socket) {
+    client.disconnect(true);
     console.log('user has left');
   }
 
   // JOIN ROOM
   @SubscribeMessage('join-room')
   async joinRoom(@ConnectedSocket() socket, @MessageBody() body) {
-    // const test = await redis.hgetall('roomId:13423rsefsfdse3');
-    // console.log(test)
+    console.log(`${socket.user} has joined`);
     const roomId = body.roomId;
 
     const room = await this.kirmastiModel.findOne({ _id: body.roomId });
