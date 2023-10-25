@@ -7,9 +7,9 @@ import { Kirmasti, KirmastiSchema } from 'src/schemas/kirmasti.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: Kirmasti.name, schema: KirmastiSchema },
-    ]),
+    // MongooseModule.forFeature([
+    //   { name: Kirmasti.name, schema: KirmastiSchema },
+    // ]),
   ],
   controllers: [KirmastiController],
   providers: [KirmastiService, KirmastiGateway],

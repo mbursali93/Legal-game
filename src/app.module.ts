@@ -11,14 +11,14 @@ import { KirmastiController } from './games/kirmasti/kirmasti.controller';
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    MongooseModule.forRoot(process.env.MONGO_URL, {
-      user: process.env.MONGO_USER,
-      pass: process.env.MONGO_PASS,
-      dbName: process.env.MONGO_DBNAME,
-    }),
-    MongooseModule.forFeature([
-      { name: Kirmasti.name, schema: KirmastiSchema },
-    ]),
+    // MongooseModule.forRoot(process.env.MONGO_URL, {
+    //   user: process.env.MONGO_USER,
+    //   pass: process.env.MONGO_PASS,
+    //   dbName: process.env.MONGO_DBNAME,
+    // }),
+    // MongooseModule.forFeature([
+    //   { name: Kirmasti.name, schema: KirmastiSchema },
+    // ]),
     GamesModule,
   ],
   controllers: [AppController, KirmastiController],
