@@ -12,24 +12,19 @@ import { redis } from 'src/redis';
 import { Kirmasti } from 'src/schemas/kirmasti.schema';
 import { UseGuards } from '@nestjs/common';
 import { verify } from 'jsonwebtoken';
+import { UserSocket } from 'src/interfaces';
 
 // @UseGuards(AuthGuard)
-// @WebSocketGateway(2001, { namespace: 'kirmasti' })
-@WebSocketGateway()
+@WebSocketGateway(2001)
 export class KirmastiGateway {
   private userSockets: Map<string, string> = new Map();
   constructor() {} // @InjectModel(Kirmasti.name) private kirmastiModel: Model<Kirmasti>,
 
-  handleConnection(client: Socket) {
-    // const token = client.request.headers.authorization;
-    // const { userId } = verify(token, process.env.JWT_SECRET) as any;
-    // const userConnected = this.userSockets.has(userId);
-    // if (userConnected) return this.handleDisconnect(client);
-    // this.userSockets.set(userId, client.id);
-    console.log(client.id + ' connected');
+  handleConnection(client: UserSocket) {
+    console.log(client.user + ' connected');
   }
 
-  handleDisconnect(client: Socket) {
+  handleDisconnect(client: UserSocket) {
     client.disconnect(true);
     console.log('user has left');
   }
@@ -38,7 +33,7 @@ export class KirmastiGateway {
   @SubscribeMessage('join-room')
   async joinRoom(@ConnectedSocket() socket, @MessageBody() body) {
     console.log(`${socket.user} has joined`);
-    socket.emit('message', 'yeod')
+    socket.emit('message', 'yeod');
     // const roomId = body.roomId;
 
     // const room = await this.kirmastiModel.findOne({ _id: body.roomId });
