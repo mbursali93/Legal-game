@@ -13,7 +13,7 @@ import { Kirmasti } from 'src/schemas/kirmasti.schema';
 import { UseGuards } from '@nestjs/common';
 import { verify } from 'jsonwebtoken';
 
-@UseGuards(AuthGuard)
+// @UseGuards(AuthGuard)
 // @WebSocketGateway(2001, { namespace: 'kirmasti' })
 @WebSocketGateway()
 export class KirmastiGateway {
@@ -38,6 +38,7 @@ export class KirmastiGateway {
   @SubscribeMessage('join-room')
   async joinRoom(@ConnectedSocket() socket, @MessageBody() body) {
     console.log(`${socket.user} has joined`);
+    socket.emit('message', 'yeod')
     // const roomId = body.roomId;
 
     // const room = await this.kirmastiModel.findOne({ _id: body.roomId });
