@@ -6,27 +6,40 @@ import {
   WebSocketGateway,
 } from '@nestjs/websockets';
 import { Model } from 'mongoose';
-import { Socket } from 'socket.io';
+import { Socket, Server } from 'socket.io';
 import { AuthGuard } from 'src/auth.guard';
 import { redis } from 'src/redis';
 import { Kirmasti } from 'src/schemas/kirmasti.schema';
 import { UseGuards } from '@nestjs/common';
 import { verify } from 'jsonwebtoken';
 import { UserSocket } from 'src/interfaces';
+import { PlayerService } from '../player.service';
+import { Status } from '../enums';
 
-// @UseGuards(AuthGuard)
+// @UseGuards(PlayerGuard)
 @WebSocketGateway(2001)
 export class KirmastiGateway {
   private userSockets: Map<string, string> = new Map();
-  constructor() {} // @InjectModel(Kirmasti.name) private kirmastiModel: Model<Kirmasti>,
+  private playerService: PlayerService;
+  server: Server;
+  constructor() {
+    this.playerService = new PlayerService();
+    this.server = new Server();
+  }
 
-  handleConnection(client: UserSocket) {
-    console.log(client.user + ' connected');
+  async handleConnection(client: UserSocket) {
+    const statusChanged = await this.playerService.changePlayerStatus(
+      client.user,
+      Status.LOBBY,
+    );
+    if (!statusChanged) return client.disconnect();
+    console.log(`enter => user:${client.user}, socket:${client.id}`);
   }
 
   handleDisconnect(client: UserSocket) {
     client.disconnect(true);
-    console.log('user has left');
+    this.playerService.changePlayerStatus(client.user, Status.OFFLINE);
+    console.log(`left => user:${client.user}, socket:${client.id} `);
   }
 
   // JOIN ROOM

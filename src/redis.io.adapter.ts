@@ -41,7 +41,6 @@ export class RedisIoAdapter extends IoAdapter {
     }
 
     socket['user'] = userId;
-    console.log(socket.user);
     return true;
   }
 }
