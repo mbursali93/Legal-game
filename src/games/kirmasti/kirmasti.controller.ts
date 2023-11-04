@@ -19,9 +19,9 @@ export class KirmastiController {
   }
 
   @UseGuards(AuthGuard)
-  @Post()
+  @Post() //TODO: Create Dto for body
   async createRoom(@Request() req, @Body() body) {
     const userId = req.user.userId;
-    return await this.kirmastiService.createRoom(userId);
+    return await this.kirmastiService.createRoom(userId, body);
   }
 }
