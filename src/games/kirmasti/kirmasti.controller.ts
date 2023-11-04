@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { KirmastiService } from './kirmasti.service';
 import { AuthGuard } from 'src/auth.guard';
+import { KirmastiDto } from './dtos/kirmasti.dto';
 
 @Controller('kirmasti')
 export class KirmastiController {
@@ -20,7 +21,7 @@ export class KirmastiController {
 
   @UseGuards(AuthGuard)
   @Post() //TODO: Create Dto for body
-  async createRoom(@Request() req, @Body() body) {
+  async createRoom(@Request() req, @Body() body: KirmastiDto) {
     const userId = req.user.userId;
     return await this.kirmastiService.createRoom(userId, body);
   }

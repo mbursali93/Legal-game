@@ -58,7 +58,7 @@ export class KirmastiGateway {
     const userId = socket.user;
 
     const room = await redis.hgetall(`roomId:${roomId}`);
-    console.log(room);
+    console.log(room); //TODO: Interface for rooms
     if (Object.keys(room).length == 0)
       return console.log('No room to be found');
 
