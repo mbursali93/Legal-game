@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common';
 import { KirmastiController } from './kirmasti/kirmasti.controller';
 import { KirmastiService } from './kirmasti/kirmasti.service';
 import { KirmastiGateway } from './kirmasti/kirmasti.gateway';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Kirmasti, KirmastiSchema } from 'src/schemas/kirmasti.schema';
 
 @Module({
   imports: [
