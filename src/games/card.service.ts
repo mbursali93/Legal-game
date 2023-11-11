@@ -48,9 +48,10 @@ export class CardService {
     const hand = [];
 
     for (let i = 0; i < numberOfCards; i++) {
-      const randomIndex = Math.ceil(Math.random() * deck.length);
+      const randomIndex = Math.floor(Math.random() * deck.length);
       hand.push(deck[randomIndex]);
       deck.splice(randomIndex, 1);
+      console.log(`${randomIndex}.th of from ${deck.length}`);
     }
 
     return [hand, deck];

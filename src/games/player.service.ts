@@ -11,11 +11,7 @@ export class PlayerService {
   }
 
   async handleBet(userId, bet: number) {
-    const _status = await redis.hset(
-      `userId:${userId}`,
-      'currentBet',
-      bet.toString(),
-    );
+    const _status = await redis.hset(`userId:${userId}`, 'currentBet', bet);
     if (!_status) return false;
     return true;
   }
