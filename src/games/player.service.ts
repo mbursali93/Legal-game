@@ -27,6 +27,15 @@ export class PlayerService {
     return true;
   }
 
+  async handleUserWinning(userId, money: number) {
+    const currentMoney = parseInt(
+      await redis.hget(`userId:${userId}`, 'currentMoney'),
+    );
+
+    redis.hset(`userId:${userId}`, 'currentMoney', currentMoney + money);
+    return true;
+  }
+
   async handleUserLeave(userId) {
     const currentMoney = parseInt(
       await redis.hget(`userId:${userId}`, 'currentMoney'),

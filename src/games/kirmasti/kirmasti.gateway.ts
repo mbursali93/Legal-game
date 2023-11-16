@@ -17,11 +17,9 @@ import { ICard } from '../deck.interface';
 // @UseGuards(PlayerGuard)
 @WebSocketGateway(2001)
 export class KirmastiGateway {
-  // private userSockets: Map<string, string> = new Map();
   private gameFlag: Map<string, boolean> = new Map();
   private totalRoomBet: Map<string, number> = new Map();
   private userStatus: Map<string, string> = new Map();
-  // private userBets: Map<string, number> = new Map();
   private dealedPlayers: Map<string, Set<string>> = new Map();
   private roomUsers: Map<string, Set<string>> = new Map();
   private roomDecks: Map<string, ICard[]> = new Map();
@@ -100,7 +98,8 @@ export class KirmastiGateway {
 
     // GAME STARTS
     // Flag controls
-    if (roomUsers.size > 1) {
+    const gameHasBegun = this.gameFlag.get(roomId);
+    if (roomUsers.size > 1 && !gameHasBegun) {
       const emitInfo = { roomUsers, roomId };
       await this.startGame(emitInfo);
     }
@@ -128,8 +127,9 @@ export class KirmastiGateway {
 
   // @SubscribeMessage('game-starts')
   async startGame(emitInfo) {
-    await this.delay(3000);
     const { roomId, roomUsers } = emitInfo;
+    this.gameFlag.set(roomId, true);
+    await this.delay(3000);
     const deck = this.cardService.createDeck(11, 12, 13, 1);
     this.roomDecks.set(roomId, deck);
 
@@ -228,8 +228,16 @@ export class KirmastiGateway {
     const totalRoomBet = this.totalRoomBet.get(roomId);
     const winnersMoney = (totalRoomBet * 0.025) / winners.length;
 
-    for (let winner of winners) {
+    for (const winner of winners) {
+      await this.playerService.handleUserWinning(winner, winnersMoney);
     }
+
+    const roomUsers = this.roomUsers.get(roomId);
+
+    for (const user of roomUsers) {
+      await redis.hset(`userId:${user}`, 'currentBet', 0);
+    }
+    this.totalRoomBet.set(roomId, 0);
   }
 
   delay(ms) {
