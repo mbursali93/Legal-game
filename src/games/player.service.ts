@@ -11,8 +11,32 @@ export class PlayerService {
   }
 
   async handleBet(userId, bet: number) {
-    const _status = await redis.hset(`userId:${userId}`, 'currentBet', bet);
-    if (!_status) return false;
+    // const _status = await redis.hset(`userId:${userId}`, 'currentBet', bet);
+    // if (!_status) return false;
+    // return true;
+    const currentBet = parseInt(
+      await redis.hget(`userId:${userId}`, 'currentBet'),
+    );
+    const currentMoney = parseInt(
+      await redis.hget(`userId:${userId}`, 'currentMoney'),
+    );
+
+    redis.hset(`userId:${userId}`, 'currentMoney', currentMoney - bet);
+    redis.hset(`userId:${userId}`, 'currentBet', currentBet + bet);
+
     return true;
+  }
+
+  async handleUserLeave(userId) {
+    const currentMoney = parseInt(
+      await redis.hget(`userId:${userId}`, 'currentMoney'),
+    );
+    const currentBet = parseInt(
+      await redis.hget(`userId:${userId}`, 'currentBet'),
+    );
+    const newAmount = currentMoney - currentBet;
+
+    redis.hset(`userId:${userId}`, 'currentMoney', newAmount);
+    redis.hset(`userId:${userId}`, 'currentBet', 0);
   }
 }

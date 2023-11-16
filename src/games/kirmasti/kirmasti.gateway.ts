@@ -19,6 +19,9 @@ import { ICard } from '../deck.interface';
 export class KirmastiGateway {
   // private userSockets: Map<string, string> = new Map();
   private gameFlag: Map<string, boolean> = new Map();
+  private totalRoomBet: Map<string, number> = new Map();
+  private userStatus: Map<string, string> = new Map();
+  // private userBets: Map<string, number> = new Map();
   private dealedPlayers: Map<string, Set<string>> = new Map();
   private roomUsers: Map<string, Set<string>> = new Map();
   private roomDecks: Map<string, ICard[]> = new Map();
@@ -43,6 +46,7 @@ export class KirmastiGateway {
 
   // TODO: Fix Bug
   handleDisconnect(client: UserSocket) {
+    // leave room
     client.disconnect(true);
     this.playerService.changePlayerStatus(client.user, Status.OFFLINE);
     console.log(`left => user:${client.user}, socket:${client.id} `);
@@ -57,7 +61,9 @@ export class KirmastiGateway {
   @SubscribeMessage('join-room')
   async joinRoom(@ConnectedSocket() socket, @MessageBody() body) {
     const { roomId } = body;
+    const { callBet, dealBet } = await this.getRoomAmounts(roomId);
     // TODO: Add level check
+    // TODO: Add money check
     const userId = socket.user;
 
     const room = await redis.hgetall(`roomId:${roomId}`);
@@ -66,6 +72,12 @@ export class KirmastiGateway {
       return console.log('No room to be found');
 
     // USERS CHECK
+    const userMoney = parseInt(
+      await redis.hget(`userId:${userId}`, 'currentMoney'),
+    );
+
+    if (userMoney < callBet + dealBet) return console.log('not enough money');
+
     let roomUsers = this.roomUsers.get(roomId);
     if (roomUsers == undefined) {
       this.roomUsers.set(roomId, new Set());
@@ -102,14 +114,16 @@ export class KirmastiGateway {
     const userInTheRoom = roomUsers.has(userId);
     if (!userInTheRoom) return;
 
+    await this.playerService.handleUserLeave(userId);
     roomUsers.delete(socket.user);
     this.roomUsers.set(roomId, roomUsers);
     redis.hset(`userId:${userId}`, 'currentStatus', Status.LOBBY);
+    socket.leave(roomId);
 
     // console.log(`${socket.user} left the room: ${roomId}`);
 
     // TODO: Delete room if it's empty
-    // TODO: socket.leave
+    // TODO: Change flag back to false when only 1 user left
   }
 
   // @SubscribeMessage('game-starts')
@@ -120,9 +134,10 @@ export class KirmastiGateway {
     this.roomDecks.set(roomId, deck);
 
     // FIRST PART
+    this.dealedPlayers.set(roomId, new Set());
     await this.delay(5000);
-    const dealedPlayers = this.dealedPlayers.get(roomId);
-    for (const user of roomUsers) {
+    let dealedPlayers = this.dealedPlayers.get(roomId);
+    for (const user of dealedPlayers) {
       const roomDeck = this.roomDecks.get(roomId);
       const [hand, currentDeck] = this.cardService.dealHand(roomDeck, 2);
       const sortedHand = hand.sort((a, b) => a.point - b.point);
@@ -134,15 +149,16 @@ export class KirmastiGateway {
     }
 
     //SECOND PART
+    this.dealedPlayers.set(roomId, new Set());
     await this.delay(5000);
-
+    dealedPlayers = this.dealedPlayers.get(roomId);
     const [finalCard, currentDeck] = this.cardService.dealHand(
       this.roomDecks.get(roomId),
       1,
     );
     this.server.to(roomId).emit('cards', finalCard[0]);
     const winners = [];
-    for (const user of roomUsers) {
+    for (const user of dealedPlayers) {
       const playerHand = this.userHands.get(user);
 
       //SORTING
@@ -155,25 +171,66 @@ export class KirmastiGateway {
 
     // HANDLE WINNERS MONEY
     this.server.to(roomId).emit('cards', winners);
+    //
 
     //RESTART GAME
   }
 
+  // RoomGuard
   @SubscribeMessage('accept-deal')
   async acceptDeal(@ConnectedSocket() socket, @MessageBody() body) {
-    const deck = this.cardService.createDeck(11, 12, 13, 1);
-    const [hand, newDeck] = this.cardService.dealHand(deck, 2);
+    const { roomId } = body;
+    const userId = socket.user;
 
-    socket.emit('test', newDeck);
-    console.log(hand);
+    const dealBet = parseInt(await redis.hget(`roomId:${roomId}`, 'dealBet'));
+    // const totalUserBets = this.userBets.get(socket.user);
+
+    // this.userBets.set(socket.user, totalUserBets + dealBet);
+    await this.playerService.handleBet(userId, dealBet);
+    const dealedPlayers = this.dealedPlayers.get(roomId);
+    dealedPlayers.add(socket.user);
+    this.dealedPlayers.set(roomId, dealedPlayers);
+
+    const totalRoomBet = this.totalRoomBet.get(roomId);
+    this.totalRoomBet.set(roomId, totalRoomBet + dealBet);
   }
 
   @SubscribeMessage('bet')
-  async bet() {}
+  async bet(@MessageBody() body, @ConnectedSocket() socket) {
+    const { roomId } = body;
+    const userId = socket.user;
+
+    const callBet = parseInt(await redis.hget(`roomId:${roomId}`, 'callBet'));
+    // const totalUserBets = this.userBets.get(socket.user);
+
+    // this.userBets.set(socket.user, totalUserBets + callBet);
+    await this.playerService.handleBet(userId, callBet);
+    const dealedPlayers = this.dealedPlayers.get(roomId);
+    dealedPlayers.add(socket.user);
+    this.dealedPlayers.set(roomId, dealedPlayers);
+
+    const totalRoomBet = this.totalRoomBet.get(roomId);
+    this.totalRoomBet.set(roomId, totalRoomBet + callBet);
+  }
 
   @SubscribeMessage('fold')
   async fold() {}
   //
+
+  async getRoomAmounts(roomId) {
+    const { callBet, dealBet } = await redis.hgetall(`roomId:${roomId}`);
+
+    return { callBet: parseInt(callBet), dealBet: parseInt(dealBet) };
+  }
+
+  async handleEndGame(roomId, winners: string[]) {
+    if (winners.length == 0) return;
+    const totalRoomBet = this.totalRoomBet.get(roomId);
+    const winnersMoney = (totalRoomBet * 0.025) / winners.length;
+
+    for (let winner of winners) {
+    }
+  }
 
   delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
