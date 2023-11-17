@@ -182,7 +182,7 @@ export class KirmastiGateway {
     const { roomId } = body;
     const userId = socket.user;
 
-    const dealBet = parseInt(await redis.hget(`roomId:${roomId}`, 'dealBet'));
+    const { dealBet } = await this.getRoomAmounts(roomId);
     // const totalUserBets = this.userBets.get(socket.user);
 
     // this.userBets.set(socket.user, totalUserBets + dealBet);
@@ -200,7 +200,7 @@ export class KirmastiGateway {
     const { roomId } = body;
     const userId = socket.user;
 
-    const callBet = parseInt(await redis.hget(`roomId:${roomId}`, 'callBet'));
+    const { callBet } = await this.getRoomAmounts(roomId);
     // const totalUserBets = this.userBets.get(socket.user);
 
     // this.userBets.set(socket.user, totalUserBets + callBet);
