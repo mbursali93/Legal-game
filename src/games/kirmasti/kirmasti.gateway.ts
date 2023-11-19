@@ -101,6 +101,7 @@ export class KirmastiGateway {
     const gameHasBegun = this.gameFlag.get(roomId);
     if (roomUsers.size > 1 && !gameHasBegun) {
       const emitInfo = { roomUsers, roomId };
+      this.totalRoomBet.set(roomId, 0);
       await this.startGame(emitInfo);
     }
   }
@@ -129,14 +130,17 @@ export class KirmastiGateway {
   async startGame(emitInfo) {
     const { roomId, roomUsers } = emitInfo;
     this.gameFlag.set(roomId, true);
+    console.log('game starts in 3..2..1..');
     await this.delay(3000);
     const deck = this.cardService.createDeck(11, 12, 13, 1);
     this.roomDecks.set(roomId, deck);
 
     // FIRST PART
     this.dealedPlayers.set(roomId, new Set());
-    await this.delay(5000);
+    console.log('wanna deal?');
+    await this.delay(15000);
     let dealedPlayers = this.dealedPlayers.get(roomId);
+    if (dealedPlayers.size <= 1) return await this.startGame(emitInfo);
     for (const user of dealedPlayers) {
       const roomDeck = this.roomDecks.get(roomId);
       const [hand, currentDeck] = this.cardService.dealHand(roomDeck, 2);
@@ -149,8 +153,9 @@ export class KirmastiGateway {
     }
 
     //SECOND PART
+    console.log('wanna bet??');
     this.dealedPlayers.set(roomId, new Set());
-    await this.delay(5000);
+    await this.delay(15000);
     dealedPlayers = this.dealedPlayers.get(roomId);
     const [finalCard, currentDeck] = this.cardService.dealHand(
       this.roomDecks.get(roomId),
@@ -171,13 +176,14 @@ export class KirmastiGateway {
 
     // HANDLE WINNERS MONEY
     this.server.to(roomId).emit('cards', winners);
-    //
+    await this.handleEndGame(roomId, winners);
+    await this.startGame(emitInfo);
 
     //RESTART GAME
   }
 
   // RoomGuard
-  @SubscribeMessage('accept-deal')
+  @SubscribeMessage('deal')
   async acceptDeal(@ConnectedSocket() socket, @MessageBody() body) {
     const { roomId } = body;
     const userId = socket.user;
@@ -226,7 +232,10 @@ export class KirmastiGateway {
   async handleEndGame(roomId, winners: string[]) {
     if (winners.length == 0) return;
     const totalRoomBet = this.totalRoomBet.get(roomId);
-    const winnersMoney = (totalRoomBet * 0.025) / winners.length;
+    const houseCut = totalRoomBet * 0.025;
+    const winnersMoney = (totalRoomBet - houseCut) / winners.length;
+    console.log(totalRoomBet);
+    console.log(winnersMoney);
 
     for (const winner of winners) {
       await this.playerService.handleUserWinning(winner, winnersMoney);

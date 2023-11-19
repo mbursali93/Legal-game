@@ -32,7 +32,8 @@ export class PlayerService {
       await redis.hget(`userId:${userId}`, 'currentMoney'),
     );
 
-    redis.hset(`userId:${userId}`, 'currentMoney', currentMoney + money);
+    const newMoney = money + currentMoney;
+    await redis.hset(`userId:${userId}`, 'currentMoney', newMoney);
     return true;
   }
 
